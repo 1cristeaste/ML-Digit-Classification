@@ -1,0 +1,108 @@
+---
+title: "Hyperparameter Investigation"
+output: html_document
+---
+
+```{r warning = FALSE, message = FALSE}
+source("utils.R")
+source("penalized_logistic_regression.R")
+
+
+
+## load data sets
+
+train <- Load_data("./data/train.csv")
+valid <- Load_data("./data/valid.csv")
+test <- Load_data("./data/test.csv")
+
+x_train <- train$x
+y_train <- train$y
+
+x_valid <- valid$x
+y_valid <- valid$y
+
+x_test <- test$x
+y_test <- test$y
+
+lbd = 0
+stepsize = 0.03
+max_iter = 1000
+p1 = Penalized_Logistic_Reg(x_train, y_train, lbd, stepsize, max_iter)
+
+plot(p1$loss, xlab = "Iterations", ylab = "Training Loss", main = "Choosing Model Hyperparameters")
+plot(p1$error)
+
+
+```
+I found a larger iteration was better. 1000 might be a bit excessive, 500 could have worked as well, but I wanted to be thorough and get a clear sense of the data. I found a stepsize of 0.03 was effective for getting the data to converge. When using a larger stepsize, the loss function had more "steps" and when using a smaller stepsize, the error converged slower and the loss function had wider steps. 
+
+
+```{r}
+stepsize <- 0.03  # this should be replaced by your answer in Part a
+max_iter <- 1000  # this should be replaced by your answer in Part a
+lbd_grid <- c(0, 0.01, 0.05, 0.1, 0.5, 1)
+
+# training error
+
+p1 = Penalized_Logistic_Reg(x_train, y_train, lbd_grid[1], stepsize, max_iter)
+p2 = Penalized_Logistic_Reg(x_train, y_train, lbd_grid[2], stepsize, max_iter)
+p3 = Penalized_Logistic_Reg(x_train, y_train, lbd_grid[3], stepsize, max_iter)
+p4 = Penalized_Logistic_Reg(x_train, y_train, lbd_grid[4], stepsize, max_iter)
+p5 = Penalized_Logistic_Reg(x_train, y_train, lbd_grid[5], 0.01, max_iter)
+p6 = Penalized_Logistic_Reg(x_train, y_train, lbd_grid[6], 0.01, max_iter)
+
+
+error1 = c(p1$error[max_iter], lbd_grid[1])
+error2 = c(p2$error[max_iter], lbd_grid[2])
+error3 = c(p3$error[max_iter], lbd_grid[3])
+error4 = c(p4$error[max_iter], lbd_grid[4])
+error5 = c(p5$error[max_iter], lbd_grid[5])
+error6 = c(p6$error[max_iter], lbd_grid[6])
+errors = data.frame(t(cbind(error1, error2, error3, error4, error5, error6)))
+plot(x = errors$X2, errors$X1, xlab = "LBDs", ylab = "Errors", main = "Training Error")
+
+# validation error
+
+predicted_class1 = Predict_logis(x_valid, p1$beta, p1$beta0, "class")
+predicted_class2 = Predict_logis(x_valid, p2$beta, p2$beta0, "class")
+predicted_class3 = Predict_logis(x_valid, p3$beta, p3$beta0, "class")
+predicted_class4 = Predict_logis(x_valid, p4$beta, p4$beta0, "class")
+predicted_class5 = Predict_logis(x_valid, p5$beta, p5$beta0, "class")
+predicted_class6 = Predict_logis(x_valid, p6$beta, p6$beta0, "class")
+
+E1 = Evaluate(y_valid, predicted_class1)
+E2 = Evaluate(y_valid, predicted_class2)
+E3 = Evaluate(y_valid, predicted_class3)
+E4 = Evaluate(y_valid, predicted_class4)
+E5 = Evaluate(y_valid, predicted_class5)
+E6 = Evaluate(y_valid, predicted_class6)
+
+dta1 = c(E1, lbd_grid[1])
+dta2 = c(E2, lbd_grid[2])
+dta3 = c(E3, lbd_grid[3])
+dta4 = c(E4, lbd_grid[4])
+dta5 = c(E5, lbd_grid[5])
+dta6 = c(E6, lbd_grid[6])
+
+datas = data.frame(t(cbind(dta1, dta2, dta3, dta4, dta5, dta6)))
+plot(x = datas$X2, datas$X1, xlab = "LBDs", ylab = "Errors", main = "Validation Error")
+```
+My selected settings were not enough for all lambdas. As lambda increased, I found that the stepsize needed to decrease. I used 0.03 for the first 4 lambdas, and then 0.01 for the last 2. 
+
+Training errors increased as the lambda increased, though in the validations, the second lambda actually had a lower error than the first. As a result, the best lambda is actually 0.01.  
+
+
+```{r warning = FALSE}
+library(glmnet)
+
+stepsize <- 0.05  # this should be replaced by your answer in Part a
+max_iter <- 1000  # this should be replaced by your answer in Part a
+lbd <- 0.01       # this should be replaced by your answer in Part b
+
+testing = Predict_logis(x_test, p2$beta, p2$beta0, "class")
+eval = Evaluate(y_test, testing)
+eval
+
+mod = glmnet(x_train, y_train, alpha = stepsize, lambda = lbd)
+pred = predict(mod, s = lbd, newx = x_test)
+mean((pred - y_test)^2)

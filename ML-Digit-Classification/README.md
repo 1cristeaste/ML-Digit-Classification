@@ -1,0 +1,2 @@
+# ML-Digit-Classification
+This was a two-fold course project, where we trained a model to classify handwritten digits. First, logistical regression was used to classify 2s and 3s, followed by linear and quadratic discriminant analysis (LDA/QDA) to classify digits from 0 to 9. All three classification methods were written in R without the use of built-in functions in order to have a deeper understanding of the statistical methods used in machine learning.
